@@ -24,6 +24,14 @@ a {
     text-decoration: none;
 }
 
+/* Couleur principale */
+:root {
+    primary: #354fc7;
+    text: #20242a;
+    secondary-text: #4b5563;
+    light-text: #374151;
+}
+
 /* =========================
    Navigation
    ========================= */
