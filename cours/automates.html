@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automates à états finis — Baptiste Diedler</title>
+<style>
+  :root {
+    --accent: #354fc7;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --code-bg: #f1f5f9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .page-header {
+    background: linear-gradient(135deg, #1e293b 0%, #354fc7 100%);
+    color: #fff;
+    padding: 4rem 1.5rem 3rem;
+    text-align: center;
+  }
+  .page-header .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 0.8rem;
+    opacity: 0.85;
+    margin-bottom: 0.5rem;
+  }
+  .page-header h1 { font-size: 2.2rem; margin-bottom: 0.75rem; }
+  .page-header p { max-width: 640px; margin: 0 auto; opacity: 0.9; }
+  main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    margin: 2rem 0;
+  }
+  .toc h2 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--accent); }
+  .toc ol { padding-left: 1.4rem; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  section.chapter {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+  }
+  section.chapter h2 {
+    color: var(--accent);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border);
+  }
+  section.chapter h3 { margin: 1.5rem 0 0.5rem; font-size: 1.15rem; }
+  section.chapter p, section.chapter li { margin-bottom: 0.75rem; }
+
+  blockquote.citation {
+    border-left: 4px solid var(--accent);
+    background: var(--code-bg);
+    padding: 0.9rem 1.2rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.2rem 0;
+    font-style: italic;
+  }
+  blockquote.citation .source {
+    display: block;
+    margin-top: 0.4rem;
+    font-size: 0.85rem;
+    font-style: normal;
+    color: var(--muted);
+  }
+  .definition {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+  }
+  .definition .label {
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+  }
+  .theorem {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+  }
+  .theorem .label {
+    font-weight: 700;
+    color: #15803d;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+  }
+  .warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+  }
+  .warning .label {
+    font-weight: 700;
+    color: #b45309;
+  }
+
+  table.transitions {
+    border-collapse: collapse;
+    margin: 1rem auto;
+    background: #fff;
+  }
+  table.transitions th, table.transitions td {
+    border: 1px solid var(--border);
+    padding: 0.5rem 1.1rem;
+    text-align: center;
+  }
+  table.transitions th { background: var(--code-bg); }
+  table caption { caption-side: bottom; color: var(--muted); font-size: 0.85rem; padding-top: 0.5rem; }
+
+  figure { margin: 1.5rem 0; text-align: center; }
+  figure figcaption { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
+
+  code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 0.9em;
+  }
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  .exercise {
+    background: #fafafa;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .exercise .label {
+    font-weight: 700;
+    color: var(--accent);
+  }
+  details {
+    margin: 0.6rem 0 0;
+    border-top: 1px solid var(--border);
+    padding-top: 0.6rem;
+  }
+  details summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+  details[open] summary { color: var(--accent); }
+
+  .refs { font-size: 0.9rem; }
+  .refs li { margin-bottom: 0.5rem; }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  footer.site-footer {
+    text-align: center;
+    color: var(--muted);
+    padding: 2rem 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+  }
+  footer.site-footer a { color: var(--accent); text-decoration: none; margin: 0 0.5rem; }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <p class="kicker">Cours · Informatique théorique</p>
+  <h1>Les automates à états finis</h1>
+  <p>Un cours complet sur les automates finis et les langages rationnels : définitions, théorèmes, exemples détaillés et exercices corrigés.</p>
+</header>
+
+<main>
+
+<nav class="toc">
+  <h2>Sommaire</h2>
+  <ol>
+    <li><a href="#ch1">Pourquoi les automates ?</a></li>
+    <li><a href="#ch2">Mots et langages : le socle</a></li>
+    <li><a href="#ch3">Automates déterministes (DFA)</a></li>
+    <li><a href="#ch4">Automates non déterministes (NFA)</a></li>
+    <li><a href="#ch5">Expressions régulières et théorème de Kleene</a></li>
+    <li><a href="#ch6">Minimisation et lemme de l'étoile</a></li>
+    <li><a href="#exos">Exercices</a></li>
+    <li><a href="#refs">Références</a></li>
+  </ol>
+</nav>
+
+<!-- ================= CHAPITRE 1 ================= -->
+<section class="chapter" id="ch1">
+  <h2>1. Pourquoi les automates ?</h2>
+
+  <p>Avant toute définition, un problème concret : on vous donne une longue liste de mots et on demande lesquels contiennent un nombre pair de <code>a</code>, lesquels représentent une adresse IP valide, lesquels sont des identifiants corrects en Python. Impossible de mémoriser tous les « bons » mots : il y en a une infinité.</p>
+
+  <p>L'idée centrale de ce cours est que <strong>l'on n'a pas besoin de mémoire infinie pour résoudre ces problèmes</strong> : un nombre <em>fini</em> d'états de mémoire suffit, car tout ce qui compte du passé se résume à « dans quelle situation intermédiaire je me trouve ». C'est exactement ce que fait un <strong>automate à états finis</strong> : une machine dotée d'un nombre fini d'états, qui lit un mot lettre par lettre et se déplace d'état en état.</p>
+
+  <p>Ces objets sont au cœur des <strong>compilateurs</strong> (analyse lexicale), des <strong>expressions régulières</strong> (grep, Python, JavaScript), de la <strong>vérification de modèles</strong> (model checking) et du contrôle matériel (circuits séquentiels).</p>
+
+  <blockquote class="citation">
+    « L'automate fini est le modèle de calcul le plus simple qui soit intéressant : il ne peut pas tout calculer, mais ce qu'il calcule, il le calcule exactement, et l'on peut décider de presque tout à son sujet. »
+    <span class="source">— librement inspiré de M. Sipser, <em>Introduction to the Theory of Computation</em></span>
+  </blockquote>
+</section>
+
+<!-- ================= CHAPITRE 2 ================= -->
+<section class="chapter" id="ch2">
+  <h2>2. Mots et langages : le socle</h2>
+
+  <h3>2.1 Définitions</h3>
+
+  <div class="definition">
+    <span class="label">Définition (Alphabet).</span> Un <strong>alphabet</strong> est un ensemble <em>fini</em> de symboles, noté Σ. Exemples : Σ = {a, b}, Σ = {0, 1}.
+  </div>
+
+  <div class="definition">
+    <span class="label">Définition (Mot).</span> Un <strong>mot</strong> sur Σ est une suite finie de symboles de Σ. On note ε le <strong>mot vide</strong> (longueur 0). L'ensemble de tous les mots est Σ<sup>*</sup>, l'<strong>étoile de Kleene</strong> : pour Σ = {a, b}, Σ<sup>*</sup> = {ε, a, b, aa, ab, ba, bb, aaa, …}.
+  </div>
+
+  <div class="definition">
+    <span class="label">Définition (Concaténation).</span> La concaténation de u = a₁…aₙ et v = b₁…bₘ est uv = a₁…aₙb₁…bₘ. Loi <strong>associative</strong> d'élément neutre ε, mais <strong>non commutative</strong> : ab ≠ ba.
+  </div>
+
+  <div class="definition">
+    <span class="label">Définition (Langage).</span> Un <strong>langage</strong> sur Σ est une partie quelconque de Σ<sup>*</sup> : L ⊆ Σ<sup>*</sup>.
+  </div>
+
+  <div class="warning">
+    <span class="label">⚠ Piège classique n°1.</span> Ne pas confondre ε (un <em>mot</em> de longueur 0) et ∅ (un <em>ensemble</em> sans élément, donc un langage ne contenant aucun mot — même pas le mot vide). On a {ε} ≠ ∅, et ∅<sup>*</sup> = {ε}.
+  </div>
+
+  <h3>2.2 Opérations sur les langages</h3>
+  <ul>
+    <li><strong>Union</strong> L₁ ∪ L₂ : les mots dans L₁ <em>ou</em> L₂ ;</li>
+    <li><strong>Intersection</strong> L₁ ∩ L₂ ; <strong>complément</strong> L̅ = Σ<sup>*</sup> ∖ L ;</li>
+    <li><strong>Concaténation</strong> L₁L₂ = { uv | u ∈ L₁, v ∈ L₂ } ;</li>
+    <li><strong>Étoile</strong> L<sup>*</sup> = ⋃<sub>n≥0</sub> L<sup>n</sup> : toutes les concaténations (y compris zéro) de mots de L.</li>
+  </ul>
+
+  <p><strong>Exemples.</strong> {ab}<sup>*</sup> = {ε, ab, abab, ababab, …} — attention, <code>abab</code> est dedans mais pas <code>aba</code>. Le langage « nombre pair de a » : { w ∈ {a,b}<sup>*</sup> | |w|<sub>a</sub> est pair }.</p>
+
+  <blockquote class="citation">
+    « Un langage est un ensemble de mots ; une manière de décrire un langage, c'est déjà calculer. »
+    <span class="source">— esprit de l'ouverture de J. Sakarovitch, <em>Éléments de théorie des automates</em> (2003) : la théorie des automates est née du besoin de représenter des ensembles infinis de façon finie.</span>
+  </blockquote>
+</section>
+
+<!-- ================= CHAPITRE 3 ================= -->
+<section class="chapter" id="ch3">
+  <h2>3. Automates déterministes (DFA)</h2>
+
+  <h3>3.1 Définition</h3>
+
+  <div class="definition">
+    <span class="label">Définition (Automate fini déterministe).</span> Un <strong>DFA</strong> est un quintuplet 𝒜 = (Q, Σ, δ, q₀, F) où :
+    <ul>
+      <li><strong>Q</strong> : ensemble <em>fini</em> d'<strong>états</strong> ;</li>
+      <li><strong>Σ</strong> : alphabet d'entrée ;</li>
+      <li><strong>δ : Q × Σ → Q</strong> : fonction de transition <em>totale</em> (de chaque état, pour chaque lettre, exactement une flèche sortante) ;</li>
+      <li><strong>q₀ ∈ Q</strong> : état initial ;</li>
+      <li><strong>F ⊆ Q</strong> : états <strong>acceptants</strong>.</li>
+    </ul>
+    <p><strong>Déterministe</strong> signifie : même configuration, même comportement — aucun choix, l'exécution d'un mot est une trajectoire unique.</p>
+  </div>
+
+  <p>On étend δ aux mots par récurrence : δ̂(q, ε) = q et δ̂(q, ua) = δ(δ̂(q, u), a). Le mot w est <strong>accepté</strong> si δ̂(q₀, w) ∈ F, et le langage reconnu est L(𝒜) = { w ∈ Σ<sup>*</sup> | δ̂(q₀, w) ∈ F }.</p>
+
+  <h3>3.2 Premier exemple complet : nombre pair de a</h3>
+
+  <p>Ce qu'il faut retenir du passé est uniquement la <em>parité</em> du nombre de a déjà lus : deux situations suffisent !</p>
+
+  <table class="transitions">
+    <caption>Table de transition de 𝒜₁ (q<sub>pair</sub> est l'état initial et acceptant).</caption>
+    <tr><th>état</th><th>a</th><th>b</th></tr>
+    <tr><td><strong>→ ((q_pair))</strong></td><td>q_impair</td><td>q_pair</td></tr>
+    <tr><td>q_impair</td><td>q_pair</td><td>q_impair</td></tr>
+  </table>
+
+  <figure>
+    <svg viewBox="0 0 560 170" width="100%" style="max-width:520px" role="img" aria-label="Automate à deux états reconnaissant les mots de nombre pair de a">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1e293b"/>
+        </marker>
+      </defs>
+      <!-- flèche d'entrée -->
+      <line x1="20" y1="85" x2="88" y2="85" stroke="#1e293b" stroke-width="2" marker-end="url(#arr)"/>
+      <!-- état pair -->
+      <circle cx="130" cy="85" r="34" fill="#eef2ff" stroke="#354fc7" stroke-width="2"/>
+      <circle cx="130" cy="85" r="27" fill="none" stroke="#354fc7" stroke-width="2"/>
+      <text x="130" y="91" text-anchor="middle" font-size="14" fill="#1e293b">q_pair</text>
+      <!-- état impair -->
+      <circle cx="420" cy="85" r="34" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+      <text x="420" y="91" text-anchor="middle" font-size="14" fill="#1e293b">q_impair</text>
+      <!-- transition a (pair -> impair) -->
+      <line x1="164" y1="85" x2="386" y2="85" stroke="#1e293b" stroke-width="2" marker-end="url(#arr)"/>
+      <text x="275" y="75" text-anchor="middle" font-size="15" font-weight="bold" fill="#354fc7">a</text>
+      <!-- transition a (impair -> pair, arc retour) -->
+      <path d="M 400 115 Q 275 165 150 115" fill="none" stroke="#1e293b" stroke-width="2" marker-end="url(#arr)"/>
+      <text x="275" y="152" text-anchor="middle" font-size="15" font-weight="bold" fill="#354fc7">a</text>
+      <!-- boucle b sur pair -->
+      <path d="M 118 54 Q 108 20 145 22 Q 175 26 142 53" fill="none" stroke="#1e293b" stroke-width="2" marker-end="url(#arr)"/>
+      <text x="128" y="18" text-anchor="middle" font-size="15" font-weight="bold" fill="#354fc7">b</text>
+      <!-- boucle b sur impair -->
+      <path d="M 432 54 Q 442 20 405 22 Q 375 26 408 53" fill="none" stroke="#1e293b" stroke-width="2" marker-end="url(#arr)"/>
+      <text x="422" y="18" text-anchor="middle" font-size="15" font-weight="bold" fill="#354fc7">b</text>
+    </svg>
+    <figcaption>Diagramme de 𝒜₁ : la flèche entrante désigne q₀, le double cercle un état acceptant.</figcaption>
+  </figure>
+
+  <p><strong>Lecture de abba :</strong> q<sub>pair</sub> <em>—a→</em> q<sub>impair</sub> <em>—b→</em> q<sub>impair</sub> <em>—b→</em> q<sub>impair</sub> <em>—a→</em> q<sub>pair</sub> ✔ (4 lettres a, nombre pair). Que w est accepté si et seulement si |w|<sub>a</sub> est pair se <strong>prouve</strong> par induction sur |w| (exercice 5).</p>
+
+  <h3>3.3 Autres exemples</h3>
+  <ul>
+    <li><strong>Identifiants Java</strong> : une lettre puis des lettres/chiffres — q₀ <em>—lettre→</em> q₁, q₁ boucle sur lettres et chiffres, F = {q₁}.</li>
+    <li><strong>Divisibilité par 3 en binaire</strong> : états q₀, q₁, q₂ = reste modulo 3 du nombre lu ; en lisant un bit b, le reste devient (2r + b) mod 3. Exemple : 1010₂ = 10, divisible par 3 → accepté. Un grand classique d'examen.</li>
+  </ul>
+
+  <h3>3.4 Langages reconnaissables et fermetures</h3>
+
+  <div class="definition">
+    <span class="label">Définition.</span> Un langage L est <strong>reconnaissable</strong> (ou rationnel) s'il existe un DFA 𝒜 avec L = L(𝒜).
+  </div>
+
+  <div class="theorem">
+    <span class="label">Théorème (fermetures effectives).</span> Les langages reconnaissables sont <strong>fermés</strong> pour l'union, le complément, l'intersection, la concaténation et l'étoile — et toutes ces fermetures sont <em>effectives</em> (on peut construire l'automate du résultat).
+    <p style="margin-top:0.6rem"><strong>Idées des preuves :</strong> union/intersection par produit cartésien (on avance dans les deux automates simultanément, condition d'acceptation adaptée) ; complément en échangeant F et Q ∖ F — c'est ici qu'on voit la puissance du <em>déterminisme</em> : pour un NFA, cette opération immédiate est impossible sans déterminiser (§4).</p>
+  </div>
+</section>
+
+<!-- ================= CHAPITRE 4 ================= -->
+<section class="chapter" id="ch4">
+  <h2>4. Automates non déterministes (NFA)</h2>
+
+  <h3>4.1 Deux relaxations</h3>
+
+  <div class="definition">
+    <span class="label">Définition (NFA).</span> Un automate <strong>non déterministe</strong> autorise : (1) plusieurs transitions portant la même lettre depuis un état, voire zéro — δ : Q × Σ → 𝒫(Q) ; (2) dans la variante NFA-ε, des <strong>transitions spontanées</strong> ε, empruntées sans consommer de lettre. Un mot est accepté s'il <em>existe au moins un</em> chemin étiqueté par ce mot, de q₀ à un état de F.
+  </div>
+
+  <p>Le non-déterminisme est un « devin » : on peut se figurer la machine explorant tous les chemins à la fois et acceptant si l'un d'eux gagne.</p>
+
+  <p><strong>Exemple — mots se terminant par ab.</strong> Pour un DFA, la construction est acrobatique ; pour un NFA, c'est immédiat : à chaque <code>a</code> lu, l'automate peut « parier » que c'est l'avant-dernière lettre. Si le pari s'avère faux, le chemin meurt — ce n'est pas grave : il suffit qu'un chemin gagne.</p>
+
+  <figure>
+    <svg viewBox="0 0 560 140" width="100%" style="max-width:520px" role="img" aria-label="NFA à trois états reconnaissant les mots se terminant par ab">
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1e293b"/>
+        </marker>
+      </defs>
+      <line x1="15" y1="70" x2="66" y2="70" stroke="#1e293b" stroke-width="2" marker-end="url(#arr2)"/>
+      <circle cx="100" cy="70" r="32" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+      <text x="100" y="76" text-anchor="middle" font-size="15">q₀</text>
+      <circle cx="300" cy="70" r="32" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+      <text x="300" y="76" text-anchor="middle" font-size="15">q₁</text>
+      <circle cx="490" cy="70" r="32" fill="#eef2ff" stroke="#354fc7" stroke-width="2"/>
+      <circle cx="490" cy="70" r="25" fill="none" stroke="#354fc7" stroke-width="2"/>
+      <text x="490" y="76" text-anchor="middle" font-size="15">q₂</text>
+      <line x1="132" y1="70" x2="268" y2="70" stroke="#1e293b" stroke-width="2" marker-end="url(#arr2)"/>
+      <text x="200" y="60" text-anchor="middle" font-size="15" font-weight="bold" fill="#354fc7">a</text>
+      <line x1="332" y1="70" x2="458" y2="70" stroke="#1e293b" stroke-width="2" marker-end="url(#arr2)"/>
+      <text x="395" y="60" text-anchor="middle" font-size="15" font-weight="bold" fill="#354fc7">b</text>
+      <path d="M 80 42 Q 55 5 120 12 Q 150 20 122 45" fill="none" stroke="#1e293b" stroke-width="2" marker-end="url(#arr2)"/>
+      <text x="96" y="12" text-anchor="middle" font-size="15" font-weight="bold" fill="#354fc7">a, b</text>
+      <path d="M 100 102 Q 200 135 300 102" fill="none" stroke="#354fc7" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arr2)"/>
+      <text x="200" y="130" text-anchor="middle" font-size="14" font-weight="bold" fill="#354fc7">a (deuxième pari)</text>
+    </svg>
+    <figcaption>NFA des mots se terminant par ab : depuis q₀, chaque a permet de rester (boucle a, b) ou de parier (transition a vers q₁).</figcaption>
+  </figure>
+
+  <p>Le non-déterminisme n'apporte aucune <em>puissance</em> (théorème ci-dessous), mais une <em>concision remarquable</em> : il existe des langages dont le plus petit NFA a n états et le plus petit DFA 2ⁿ états (« la n-ième lettre avant la fin est un a »).</p>
+
+  <h3>4.2 Le théorème central : déterminisation</h3>
+
+  <div class="theorem">
+    <span class="label">Théorème (déterminisation, Rabin &amp; Scott 1959).</span> Pour tout NFA 𝒜, il existe un DFA 𝒜′ avec L(𝒜) = L(𝒜′), donné par la <strong>construction par parties</strong> (subset construction) : après avoir lu u, le DFA simule <em>l'ensemble</em> des états où le NFA pourrait se trouver. δ′(S, a) = ⋃<sub>q ∈ S</sub> δ(q, a) ; les états acceptants sont les S qui rencontrent F.
+  </div>
+
+  <p><strong>Exemple (déterminisation du NFA ci-dessus).</strong> Seules trois parties sont accessibles (toujours élaguer !) :</p>
+
+  <table class="transitions">
+    <caption>DFA déterminisé : S₁ est acceptant (contient q₂). L'ensemble ∅ et les autres parties ne sont jamais atteints.</caption>
+    <tr><th>partie</th><th>a</th><th>b</th></tr>
+    <tr><td><strong>→</strong> S₀ = {q₀}</td><td>S₁ = {q₀, q₁}</td><td>S₀</td></tr>
+    <tr><td>S₁ = {q₀, q₁}</td><td>S₁</td><td><strong>((S₂ = {q₀, q₂}))</strong></td></tr>
+    <tr><td>S₂ = {q₀, q₂}</td><td>S₁</td><td>S₀</td></tr>
+  </table>
+
+  <blockquote class="citation">
+    « Le non-déterminisme est une <em>aide à la spécification</em>, pas une extension du pouvoir de calcul : tout ce qu'un devin devine en un coup, une machine systématique obtient en explorant tout. »
+    <span class="source">— paraphrase de la présentation des NFA dans M. Sipser, <em>Introduction to the Theory of Computation</em> (2012)</span>
+  </blockquote>
+</section>
+
+<!-- ================= CHAPITRE 5 ================= -->
+<section class="chapter" id="ch5">
+  <h2>5. Expressions régulières et théorème de Kleene</h2>
+
+  <h3>5.1 Définition</h3>
+
+  <div class="definition">
+    <span class="label">Définition (expression régulière).</span> Sur Σ : ∅ et ε sont régulières, ainsi que chaque a ∈ Σ ; si E₁, E₂ sont régulières, alors E₁ + E₂ (union), E₁·E₂ (concaténation) et E₁<sup>*</sup> (étoile) le sont. Priorités : <sup>*</sup> &gt; · &gt; +. Chaque expression dénote un langage ⟦E⟧.
+  </div>
+
+  <p><strong>Exemples.</strong></p>
+  <ul>
+    <li><code>a(ba)*</code> : {a, aba, ababa, …}</li>
+    <li><code>(a+b)*a(a+b)*</code> : les mots contenant au moins un a ;</li>
+    <li><code>(0+1)*11(0+1)*</code> : les chaînes binaires contenant « 11 » ;</li>
+    <li><code>a*b*</code> : un bloc de a puis un bloc de b.</li>
+  </ul>
+
+  <h3>5.2 Le théorème de Kleene</h3>
+
+  <div class="theorem">
+    <span class="label">Théorème (Kleene, 1956).</span> Un langage sur Σ est reconnaissable par automate fini <strong>si et seulement si</strong> il est dénoté par une expression régulière : Rec(Σ<sup>*</sup>) = Rat(Σ<sup>*</sup>).
+    <ul style="margin-top:0.6rem">
+      <li><strong>(⇐)</strong> des expressions vers les automates : fermetures effectives du §3.4 (constructions de Thompson, McNaughton-Yamada) ;</li>
+      <li><strong>(⇒)</strong> des automates vers les expressions : algorithme de McNaughton-Yamada, résolution d'équations de langages, ou élimination d'états.</li>
+    </ul>
+    <p>Ce résultat unifie trois visions — <strong>machine</strong> (automate), <strong>formule</strong> (expression), <strong>logique</strong> — et fonde l'analyse lexicale des compilateurs et les moteurs d'expressions régulières (grep, sed, Lex/Flex).</p>
+  </div>
+
+  <blockquote class="citation">
+    Kleene introduit ses « événements réguliers » comme les ensembles de comportements qu'une machine à états finis peut distinguer — l'adjectif <em>regular</em> vient de la régularité de ces comportements, descriptibles par un nombre fini de règles.
+    <span class="source">— S. C. Kleene, « Representation of events in nerve nets and finite automata », <em>Automata Studies</em>, 1956</span>
+  </blockquote>
+
+  <div class="warning">
+    <span class="label">⚠ Regex de Kleene ≠ regex des programmeurs.</span> Les regex de Perl, Python (<code>re</code>… avec backreferences comme <code>(.+)\1</code>) ou look-ahead dépassent strictement le pouvoir des automates finis (l'appariement devient NP-complet). Une regex avec backreference n'est <strong>pas</strong> un langage rationnel. Les moteurs à sémantique purement régulière (RE2) implémentent exactement la déterminisation du §4.2.
+  </div>
+</section>
+
+<!-- ================= CHAPITRE 6 ================= -->
+<section class="chapter" id="ch6">
+  <h2>6. Minimisation et lemme de l'étoile</h2>
+
+  <h3>6.1 Myhill-Nerode et minimalité</h3>
+
+  <div class="theorem">
+    <span class="label">Théorème (Myhill-Nerode, 1958).</span> Tout langage reconnaissable L possède un <strong>unique</strong> DFA minimal (à isomorphisme près, et accessible). Ses états sont les classes de l'équivalence de Nerode : u ∼<sub>L</sub> v si et seulement si ∀z ∈ Σ<sup>*</sup>, uz ∈ L ⇔ vz ∈ L. Les états du minimal sont exactement les « significations » distinctes que le passé peut avoir pour le futur.
+  </div>
+
+  <p><strong>Algorithme de Moore</strong> (raffinement de partition) : partir de {F, Q ∖ F} et séparer deux états si une lettre les envoie dans des blocs distincts ; répéter jusqu'à stabilité. Complexité O(n²), améliorée en O(n log n) par Hopcroft (1971).</p>
+
+  <h3>6.2 Le lemme de l'étoile (pumping lemma)</h3>
+
+  <div class="theorem">
+    <span class="label">Lemme (itération).</span> Si L est reconnaissable, il existe p ≥ 1 (prendre p = |Q|) tel que tout w ∈ L avec |w| ≥ p se décompose w = uxy avec |x| ≥ 1, |ux| ≤ p, et u x<sup>n</sup> y ∈ L pour tout n ≥ 0. <strong>Intuition</strong> : un chemin acceptant de longueur ≥ |Q| repasse forcément par un même état (principe des tiroirs), et la boucle peut être parcourue 0, 1, 2… fois.
+  </div>
+
+  <div class="warning">
+    <span class="label">⚠ Piège classique n°2.</span> Le lemme est une implication à <em>un seul sens</em> : il ne sert qu'à prouver qu'un langage <strong>n'est pas</strong> reconnaissable (par contraposée). Un langage vérifiant le lemme n'est pas nécessairement rationnel (exercice 8).
+  </div>
+
+  <p><strong>Exemple — a<sup>n</sup>b<sup>n</sup> n'est pas rationnel.</strong> Prenons w = a<sup>p</sup>b<sup>p</sup>. Toute décomposition w = uxy avec |ux| ≤ p a x = a<sup>k</sup> (k ≥ 1). Alors u x² y = a<sup>p+k</sup>b<sup>p</sup> ∉ L : contradiction. Il faudra un <strong>automate à pile</strong> (chapitre suivant). Autres langages standard non rationnels : les palindromes, {a<sup>2ⁿ</sup>}, {ww | w ∈ Σ<sup>*</sup>}.</p>
+
+  <blockquote class="citation">
+    « Le lemme de l'étoile est le premier résultat où l'élève voit la puissance d'une preuve d'impossibilité : une machine à nombre fini d'états ne peut pas compter sans borne. » La forme moderne du critère est le théorème de Myhill-Nerode, qui donne une condition <em>nécessaire et suffisante</em>.
+    <span class="source">— esprit de Hopcroft, Motwani &amp; Ullman, <em>Introduction to Automata Theory, Languages, and Computation</em> (2007)</span>
+  </blockquote>
+</section>
+
+<!-- ================= EXERCICES ================= -->
+<section class="chapter" id="exos">
+  <h2>7. Exercices</h2>
+
+  <h3>Application</h3>
+
+  <div class="exercise">
+    <span class="label">Exercice 1 (tracer).</span> Soit le DFA sur Σ = {0,1}, Q = {A, B, C, D}, q₀ = A, F = {D} :
+    <table class="transitions">
+      <tr><th>état</th><th>0</th><th>1</th></tr>
+      <tr><td><strong>→</strong> A</td><td>B</td><td>A</td></tr>
+      <tr><td>B</td><td>C</td><td>A</td></tr>
+      <tr><td>C</td><td>D</td><td>A</td></tr>
+      <tr><td>((D))</td><td>D</td><td>D</td></tr>
+    </table>
+    a) Tracer le diagramme. b) Le mot <code>0101</code> est-il accepté ? c) Deviner le langage. d) Prouver la conjecture par induction.
+    <details>
+      <summary>Solution</summary>
+      <p>b) A —0→ B —1→ A —0→ B —1→ A : rejeté. c) Les mots contenant le facteur <code>000</code> (vérifions : <code>000</code> donne A → B → C → D ✔, et D absorbe tout). d) Montrer par induction : l'état après u est D ssi u contient 000 ; sinon B si u finit par exactement un 0, C si exactement deux 0 finaux, A sinon.</p>
+    </details>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 2 (construire).</span> Donner des DFA minimaux pour : a) les mots de {a,b}<sup>*</sup> contenant au moins un a ; b) les mots de longueur multiple de 3 ; c) les écritures binaires des multiples de 4 ; d) les mots où chaque a est immédiatement suivi d'un b.
+    <details>
+      <summary>Indications</summary>
+      <p>a) 2 états. b) 3 états (compteur modulo). c) 4 états : les deux derniers bits forment 00. d) 3 états — attention au suffixe a en fin de mot (état « fautif » non acceptant, puits).</p>
+    </details>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 3 (déterminiser).</span> Déterminiser le NFA : q₀ boucle sur a et b, q₀ —a→ q₁, q₁ —b→ q₂, q₂ boucle sur b, F = {q₂}. Quel est le langage reconnu ? Combien d'états après élagage ?
+    <details>
+      <summary>Solution</summary>
+      <p>Une fois q₂ atteint, on ne peut plus lire que des b : tout a tue le chemin. Le langage est celui des mots <strong>dont le dernier a est suivi d'au moins un b</strong>, décrit par la régulière (a+b)*abb*. Parties accessibles : {q₀}, {q₀,q₁}, {q₀,q₂} — 3 états utiles ({q₂} seul n'est jamais atteint) ; seul {q₀,q₂} est acceptant.</p>
+    </details>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 4 (expressions régulières).</span> Écrire des expressions régulières pour : a) les mots de {a,b}<sup>*</sup> de longueur paire ; b) les mots sans deux a consécutifs ; c) les écritures binaires des nombres pairs non nuls ; d) les mots contenant exactement deux b.
+    <details>
+      <summary>Réponses (possibles)</summary>
+      <p>a) ((a+b)(a+b))* &nbsp; b) b*(ab⁺)*ab* (variantes possibles) &nbsp; c) 1(0+1)*0 &nbsp; d) a*ba*ba*.</p>
+    </details>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 5 (preuve par induction).</span> Prouver rigoureusement que le DFA 𝒜₁ du §3.2 reconnaît exactement les mots à nombre pair de a. <em>(Indication : formuler la propriété P(u) : « l'état atteint après u est q<sub>pair</sub> ssi |u|<sub>a</sub> est pair », puis faire une induction structurelle sur u, avec les deux cas u = va et u = vb.)</em>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 6 (minimisation).</span> Minimiser le DFA de l'exercice 1 par l'algorithme de Moore. Est-il déjà minimal ? Justifier avec Myhill-Nerode.
+    <details>
+      <summary>Solution</summary>
+      <p>Oui : les 4 états forment 4 classes de Nerode distinctes, distinguées par les suffixes z ∈ {00, 0, ε} — depuis C, lire 00 mène à l'acceptation ; depuis B, lire 0 ; depuis D, ε suffit ; A n'accepte aucun de ces trois.</p>
+    </details>
+  </div>
+
+  <h3>Réflexion</h3>
+
+  <div class="exercise">
+    <span class="label">Exercice 7 (pumping).</span> Prouver que L = { aⁱbʲ | i &gt; j } n'est pas rationnel. <em>(Choisir w = a<sup>p+1</sup>b<sup>p</sup> et discuter les positions possibles du facteur pompé.)</em>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 8 (piège du lemme).</span> Soit L = { ucv | u, v ∈ {a,b}<sup>*</sup> } (les mots contenant exactement un c). Montrer que L vérifie le pumping lemma (p = 2, pompage dans la partie avant le c)… mais qu'il est rationnel ! Construire son DFA. Puis expliquer pourquoi le lemme ne peut <em>jamais</em> prouver qu'un langage est rationnel, et montrer sur cet exemple pourquoi son usage réciproque est invalide.
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 9 (Myhill-Nerode appliqué).</span> Prouver avec l'équivalence de Nerode que {a<sup>n</sup>b<sup>n</sup>} n'est pas rationnel : montrer que les a<sup>i</sup>, i ∈ ℕ, sont deux à deux non équivalents (distingués par z = b<sup>i</sup>), donc une infinité de classes — or un DFA a un nombre fini d'états.
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 10 (bornes de concision).</span> Soit L<sub>n</sub> = les mots sur {a,b} dont la n-ième lettre avant la fin est un a. Construire un NFA à n+1 états pour L<sub>n</sub>, puis montrer que tout DFA pour L<sub>n</sub> a au moins 2<sup>n</sup> états. <em>(Indication : les parties de {1,…,n} sont deux à deux distinguables.)</em>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 11 (programmation).</span> Implémenter en Python : (a) la lecture d'un DFA depuis un dictionnaire, (b) <code>accepte(A, w)</code>, (c) la construction par parties, (d) la minimisation de Moore. Tester sur les exercices 1 à 3.
+    <pre><code># Squelette
+def accepte(A, w):
+    q = A["q0"]
+    for a in w:
+        q = A["delta"][(q, a)]
+    return q in A["F"]</code></pre>
+  </div>
+
+  <div class="exercise">
+    <span class="label">Exercice 12 (ouverture).</span> Un automate fini peut-il reconnaître les palindromes ? Et { ww<sup>R</sup> | |w| ≤ 1000 } ? Que cela enseigne-t-il sur la différence « mémoire finie bornée » vs « mémoire non bornée » ?
+  </div>
+</section>
+
+<!-- ================= RÉFÉRENCES ================= -->
+<section class="chapter" id="refs">
+  <h2>8. Références</h2>
+  <ul class="refs">
+    <li><strong>Kleene, S. C. (1956).</strong> « Representation of events in nerve nets and finite automata », dans Shannon &amp; McCarthy (éd.), <em>Automata Studies</em>, Princeton University Press, p. 3–41. — article fondateur : théorème de Kleene.</li>
+    <li><strong>Rabin, M. O. &amp; Scott, D. (1959).</strong> « Finite automata and their decision problems », <em>IBM Journal of Research and Development</em>, 3(2), 114–125. — non-déterminisme, construction par parties.</li>
+    <li><strong>Myhill, J. (1958)</strong> et <strong>Nerode, A. (1958).</strong> « Linear automaton transformations », <em>Proc. AMS</em>. — théorème de Myhill-Nerode.</li>
+    <li><strong>Hopcroft, J. (1971).</strong> « An n log n algorithm for minimizing states in a finite automaton ».</li>
+    <li><strong>Hopcroft, J., Motwani, R. &amp; Ullman, J. (2007).</strong> <em>Introduction to Automata Theory, Languages, and Computation</em>, 3ᵉ éd., Pearson.</li>
+    <li><strong>Sipser, M. (2012).</strong> <em>Introduction to the Theory of Computation</em>, 3ᵉ éd., Cengage.</li>
+    <li><strong>Sakarovitch, J. (2003).</strong> <em>Éléments de théorie des automates</em>, Vuibert. — la référence en français.</li>
+    <li><strong>Wolper, P. (2006).</strong> <em>Introduction à la calculabilité</em>, 3ᵉ éd., Dunod.</li>
+    <li><strong>Carton, O.</strong> <em>Langages formels, calculabilité et complexité</em> — disponible librement en ligne sur la page de l'auteur.</li>
+  </ul>
+
+  <a class="back-link" href="#accueil">← Retour à l'accueil</a>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <p>© 2026 Baptiste Diedler — <a href="mailto:baptiste.diedler@ens-paris-saclay.fr">Email</a> · <a href="https://github.com/BaptisteDiedler">GitHub</a> · <a href="https://www.linkedin.com/in/bapdiedler/">LinkedIn</a></p>
+</footer>
+
+</body>
+</html>
