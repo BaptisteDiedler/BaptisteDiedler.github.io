@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — Baptiste Diedler</title>
+<style>
+  :root {
+    --accent: #354fc7;
+    --accent-soft: #e3e9f8;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  /* ---------- Navigation ---------- */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .navbar {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.5rem;
+  }
+  .navbar .logo {
+    font-weight: 700; font-size: 1.15rem; color: var(--text); text-decoration: none;
+  }
+  .navbar .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 1.5rem; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 0.95rem;
+    transition: color .18s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links a.active { color: var(--accent); font-weight: 600; }
+
+  /* ---------- En-tête du blog ---------- */
+  .blog-hero {
+    background: linear-gradient(135deg, #1e293b 0%, #354fc7 100%);
+    color: #fff;
+    padding: 4.5rem 1.5rem;
+    text-align: center;
+  }
+  .blog-hero .kicker {
+    text-transform: uppercase; letter-spacing: 0.15em;
+    font-size: 0.8rem; opacity: 0.85; margin-bottom: 0.5rem;
+  }
+  .blog-hero h1 { font-size: 2.2rem; margin-bottom: 0.75rem; }
+  .blog-hero p { max-width: 620px; margin: 0 auto; opacity: 0.9; }
+
+  /* ---------- Barre de filtres ---------- */
+  .toolbar {
+    max-width: 1100px; margin: 2rem auto 0;
+    padding: 0 1.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+  .tags-filter { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .tag-btn {
+    background: var(--card); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 0.35rem 0.9rem; font-size: 0.82rem; cursor: pointer;
+    font-family: inherit; transition: all .18s;
+  }
+  .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tag-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .search-box {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0.45rem 0.9rem;
+  }
+  .search-box input {
+    border: none; outline: none; background: none;
+    font-size: 0.9rem; font-family: inherit; color: var(--text);
+    width: 200px;
+  }
+  .search-box svg { flex-shrink: 0; opacity: 0.5; }
+
+  /* ---------- Grille d'articles ---------- */
+  .blog-grid {
+    max-width: 1100px; margin: 2rem auto 4rem;
+    padding: 0 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+  .post-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.6rem;
+    display: flex; flex-direction: column; gap: 0.7rem;
+    transition: all .2s;
+  }
+  .post-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(53,79,199,.10);
+    border-color: #c7d2fe;
+  }
+  .post-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.8rem; color: var(--muted);
+  }
+  .post-date { display: flex; align-items: center; gap: 0.4rem; }
+  .post-card h2 {
+    font-size: 1.15rem; line-height: 1.4;
+  }
+  .post-card h2 a { color: var(--text); text-decoration: none; }
+  .post-card h2 a:hover { color: var(--accent); }
+  .post-card p {
+    font-size: 0.92rem; color: var(--muted);
+    flex: 1;
+  }
+  .post-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .post-tags span {
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 0.72rem; padding: 0.2rem 0.65rem;
+    border-radius: 999px; font-weight: 600;
+  }
+  .read-more {
+    color: var(--accent); text-decoration: none;
+    font-size: 0.88rem; font-weight: 600;
+  }
+  .read-more:hover { text-decoration: underline; }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center; color: var(--muted);
+    background: var(--card); border: 1px dashed var(--border);
+    border-radius: 16px; padding: 3rem 1.5rem;
+    display: none;
+  }
+  .empty-state.show { display: block; }
+
+  /* ---------- Article mis en avant ---------- */
+  .featured {
+    max-width: 1100px; margin: 2rem auto 0;
+    padding: 0 1.5rem;
+  }
+  .featured-card {
+    background: linear-gradient(135deg, #eef2ff 0%, #ffffff 60%);
+    border: 1px solid #c7d2fe;
+    border-radius: 16px;
+    padding: 2rem;
+    display: flex; flex-direction: column; gap: 0.7rem;
+  }
+  .featured-card .badge {
+    align-self: flex-start;
+    background: var(--accent); color: #fff;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.75rem; border-radius: 999px;
+  }
+  .featured-card h2 { font-size: 1.5rem; }
+  .featured-card h2 a { color: var(--text); text-decoration: none; }
+  .featured-card h2 a:hover { color: var(--accent); }
+  .featured-card p { color: var(--muted); max-width: 720px; }
+
+  /* ---------- Corps d'article complet ---------- */
+  .article-section {
+    max-width: 760px; margin: 3rem auto; padding: 0 1.5rem;
+  }
+  .article-section .article-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 2.5rem;
+  }
+  .article-card .article-meta {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem;
+  }
+  .article-card .article-meta .cat {
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 600; padding: 0.2rem 0.7rem; border-radius: 999px; font-size: 0.78rem;
+  }
+  .article-card h2 {
+    font-size: 1.6rem; line-height: 1.3; margin-bottom: 1.2rem;
+  }
+  .article-card h3 { font-size: 1.1rem; margin: 1.6rem 0 0.5rem; color: var(--accent); }
+  .article-card p { margin-bottom: 1rem; color: #334155; }
+  .article-card ul { margin: 0 0 1rem 1.4rem; color: #334155; }
+  .article-card li { margin-bottom: 0.4rem; }
+  .article-card .lead {
+    font-size: 1.05rem; color: var(--text); font-weight: 500;
+    border-left: 4px solid var(--accent); padding-left: 1rem; margin-bottom: 1.4rem;
+  }
+  .article-card .sources {
+    margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border);
+    font-size: 0.82rem; color: var(--muted);
+  }
+  .article-card .sources a { color: var(--accent); text-decoration: none; }
+  .article-card .sources a:hover { text-decoration: underline; }
+  .back-top {
+    display: inline-block; margin-top: 1.5rem;
+    color: var(--accent); text-decoration: none; font-size: 0.88rem; font-weight: 600;
+  }
+  .back-top:hover { text-decoration: underline; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 1.5rem;
+    text-align: center; color: var(--muted); font-size: 0.9rem;
+  }
+  footer .footer-links { margin-top: 0.5rem; }
+  footer a { color: var(--accent); text-decoration: none; margin: 0 0.5rem; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 720px) {
+    .nav-links { gap: 1rem; }
+    .search-box input { width: 130px; }
+    .blog-hero { padding: 3.5rem 1rem; }
+    .blog-hero h1 { font-size: 1.7rem; }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- Navigation -->
+<header id="top">
+  <nav class="navbar">
+    <a href="index.html" class="logo">Baptiste <span>Diedler</span></a>
+    <div class="nav-links">
+      <a href="index.html#presentation">Présentation</a>
+      <a href="index.html#formation">Formation</a>
+      <a href="index.html#stage">Stage</a>
+      <a href="index.html#cours">Cours</a>
+      <a href="blog.html" class="active">Blog</a>
+    </div>
+  </nav>
+</header>
+
+<!-- En-tête -->
+<section class="blog-hero">
+  <p class="kicker">Blog · Actualité scientifique</p>
+  <h1>Notes & actualités scientifiques</h1>
+  <p>Des analyses et commentaires sur l'actualité de la recherche en informatique théorique, en logique et au-delà.</p>
+</section>
+
+<!-- Filtres -->
+<div class="toolbar">
+  <div class="tags-filter" id="tagFilters">
+    <button class="tag-btn active" data-tag="all">Tous</button>
+    <button class="tag-btn" data-tag="informatique-theorique">Informatique théorique</button>
+    <button class="tag-btn" data-tag="methodes-formelles">Méthodes formelles</button>
+    <button class="tag-btn" data-tag="logique">Logique</button>
+    <button class="tag-btn" data-tag="complexite">Complexité</button>
+  </div>
+  <label class="search-box">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input type="search" id="searchInput" placeholder="Rechercher un article…">
+  </label>
+</div>
+
+<!-- Article mis en avant -->
+<div class="featured">
+  <article class="featured-card" data-tags='["methodes-formelles","informatique-theorique"]' id="article-evalia">
+    <span class="badge">À la une</span>
+    <h2><a href="#article-evalia">Évaluer l'IA : l'Inria lance un programme national de recherche</a></h2>
+    <p>13,5 millions d'euros, une feuille de route scientifique, un objectif : des méthodes mathématiques et informatiques fiables pour mesurer la sécurité et la robustesse des systèmes d'intelligence artificielle.</p>
+    <div class="post-tags"><span>méthodes formelles</span><span>informatique théorique</span></div>
+    <a href="#article-evalia-body" class="read-more">Lire l'article →</a>
+  </article>
+</div>
+
+<!-- Grille d'articles -->
+<main class="blog-grid" id="blogGrid">
+
+  <!-- ARTICLE 1 : Inria Évaluation de l'IA -->
+  <article class="post-card" data-tags='["methodes-formelles","informatique-theorique","logique"]'>
+    <div class="post-meta">
+      <span class="post-date">📅 22 septembre 2026</span>
+      <span>4 min de lecture</span>
+    </div>
+    <h2><a href="#article-evalia-body">Évaluer l'IA : l'Inria lance un programme national de recherche</a></h2>
+    <p>Doté de 13,5 millions d'euros dans le cadre du plan France 2030, le programme « Évaluation de l'IA » veut concevoir des méthodes mathématiques et informatiques fiables pour mesurer la sécurité et la robustesse des systèmes d'intelligence artificielle.</p>
+    <div class="post-tags">
+      <span>méthodes formelles</span>
+      <span>informatique théorique</span>
+    </div>
+    <a href="#article-evalia-body" class="read-more">Lire la suite →</a>
+  </article>
+
+  <!-- ARTICLE 2 : spintronique / commutation quantique -->
+  <article class="post-card" data-tags='["informatique-theorique"]'>
+    <div class="post-meta">
+      <span class="post-date">📅 Avril 2026</span>
+      <span>6 min de lecture</span>
+    </div>
+    <h2><a href="#article-spin-body">Des ordinateurs 1 000 fois plus rapides grâce au spin des électrons</a></h2>
+    <p>Une équipe de l'Université de Tokyo publie dans Science un composant de « commutation quantique » qui bascule un bit en 40 picosecondes — environ 1 000 fois plus vite que le CMOS actuel — tout en réduisant fortement la consommation énergétique.</p>
+    <div class="post-tags">
+      <span>informatique théorique</span>
+    </div>
+    <a href="#article-spin-body" class="read-more">Lire la suite →</a>
+  </article>
+
+  <!-- ARTICLE 3 : Fête de la science / GenIA et santé -->
+  <article class="post-card" data-tags='["methodes-formelles","logique"]'>
+    <div class="post-meta">
+      <span class="post-date">📅 Octobre 2026</span>
+      <span>5 min de lecture</span>
+    </div>
+    <h2><a href="#article-genia-body">Fête de la science 2026 : l'IA générative au service de la santé personnalisée</a></h2>
+    <p>Du 2 au 12 octobre, les centres de recherche comme l'IRISA et l'Inria présentent au grand public les promesses et les défis de la GenIA, de la formation des soignants aux LLM appliqués aux établissements de santé.</p>
+    <div class="post-tags">
+      <span>méthodes formelles</span>
+      <span>logique</span>
+    </div>
+    <a href="#article-genia-body" class="read-more">Lire la suite →</a>
+  </article>
+
+  <div class="empty-state" id="emptyState">
+    <p>Aucun article ne correspond à votre recherche.</p>
+  </div>
+</main>
+
+<!-- ================= ARTICLE COMPLET 1 ================= -->
+<section class="article-section" id="article-evalia-body">
+  <article class="article-card">
+    <div class="article-meta">
+      <span class="cat">Méthodes formelles</span>
+      <span>📅 22 septembre 2026 · 4 min de lecture</span>
+    </div>
+    <h2>Évaluer l'IA : l'Inria lance un programme national de recherche</h2>
+
+    <p class="lead">Le 22 septembre 2026, l'Inria a lancé officiellement « Évaluation de l'IA », un programme national de recherche doté de 13,5 millions d'euros dans le cadre du plan France 2030, dont la feuille de route scientifique vise à concevoir des méthodes mathématiques et informatiques fiables pour mesurer la sécurité et la robustesse des systèmes d'intelligence artificielle.</p>
+
+    <p>Évaluer un système d'intelligence artificielle ne consiste plus seulement à mesurer ses performances : à mesure que les capacités des modèles progressent et que leurs usages se diversifient, la question devient celle de leur <strong>fiabilité</strong>. Peut-on certifier qu'un modèle ne produira pas de réponses dangereuses ? Peut-on mesurer sa robustesse à des attaques adverses, la cohérence de ses réponses, son comportement en situation dégradée ? Autant de questions qui relèvent moins de l'ingénierie empirique que de la science : statistiques, théorie de l'apprentissage, vérification, sûreté de fonctionnement.</p>
+
+    <p>Le programme s'inscrit dans la mission d'« Agence de programmes dans le numérique » confiée à l'Inria, dans le cadre de France 2030. C'est un signal fort pour la communauté française de l'informatique théorique et des méthodes formelles : la sécurité de l'IA n'est pas seulement un problème de réglementation ou de gouvernance, c'est d'abord un problème <em>scientifique</em>, qui appelle des outils mathématiques rigoureux — tests statistiques, garanties de robustesse, méthodes de vérification et de certification.</p>
+
+    <h3>Ce que cela change pour la recherche</h3>
+    <ul>
+      <li>Un cadrage national : l'évaluation devient un objet de recherche à part entière, avec ses propres défis théoriques, au-delà des benchmarks de performance classiques.</li>
+      <li>Un lien direct avec la sphère industrielle et réglementaire : les méthodes développées visent à outiller concrètement la certification et l'audit des systèmes d'IA.</li>
+      <li>Une continuité avec les programmes existants de France 2030 (PEPR IA, P16 sur les communs numériques pour une IA souveraine), dont l'Inria assure aussi la coordination.</li>
+    </ul>
+
+    <p>Pour un étudiant en informatique théorique, ce programme est une excellente nouvelle : il confirme que les compétences en logique, en vérification et en théorie de la complexité sont au cœur de l'un des chantiers scientifiques les plus stratégiques de la décennie. À suivre sur le site du programme, qui publie sa feuille de route détaillée.</p>
+
+    <div class="sources">
+      Sources : <a href="https://evalia.inria.fr/">site officiel du programme Évaluation de l'IA (Inria)</a> · <a href="https://lalist.inist.fr/billet-lancement-du-programme-evaluation-de-lia-une-feuille-de-route-scientifique-pour-levaluation-et-la-securite-de-lintelligence-artificielle/">billet de veille LaLIST (INIST), 22 septembre 2026</a> · <a href="https://www.inria.fr/fr/programme-national-recherche-intelligence-artificielle">Inria, programmes nationaux de recherche en IA</a>.
+    </div>
+    <a href="#top" class="back-top">↑ Retour aux articles</a>
+  </article>
+</section>
+
+<!-- ================= ARTICLE COMPLET 2 ================= -->
+<section class="article-section" id="article-spin-body">
+  <article class="article-card">
+    <div class="article-meta">
+      <span class="cat">Informatique théorique</span>
+      <span>📅 Avril 2026 · 6 min de lecture</span>
+    </div>
+    <h2>Des ordinateurs 1 000 fois plus rapides grâce au spin des électrons ?</h2>
+
+    <p class="lead">Une équipe de physiciens et d'informaticiens de l'Université de Tokyo, associée au RIKEN et à l'Université d'Osaka, a publié dans la revue Science un composant de « commutation quantique » fondé sur la spintronique antiferromagnétique : un bit y bascule en 40 picosecondes, soit environ 1 000 fois plus vite que les technologies CMOS actuelles, tout en réduisant la consommation énergétique d'un facteur de l'ordre de 100.</p>
+
+    <p>Depuis l'invention du transistor, l'informatique repose sur un principe unique : représenter un 0 ou un 1 par la présence ou l'absence de courant électrique. Cette approche a permis cinquante ans de miniaturisation, mais elle se heurte aujourd'hui à un mur : plus les transistors commutent vite, plus ils chauffent, et le CMOS plafonne à l'échelle de la nanoseconde avant de surchauffer dangereusement. Concevoir l'informatique « autrement » — à travers de nouveaux matériaux et de nouveaux principes physiques de commutation — est donc devenu un chantier scientifique majeur.</p>
+
+    <h3>Le spin plutôt que le courant</h3>
+    <p>L'équipe du professeur Satoru Nakatsuji emprunte un autre chemin : la <strong>spintronique</strong>. Le spin est une propriété quantique intrinsèque de l'électron, assimilable à une orientation magnétique — imaginez une minuscule boussole qui peut pointer « haut » ou « bas ». Le dispositif exploite des matériaux antiferromagnétiques pour convertir un signal électrique en orientation magnétique ultra-rapide : c'est cette orientation, et non plus un courant, qui encode l'information. Résultat : une vitesse de commutation qui se mesure en <strong>picosecondes</strong> (40 ps pour basculer un bit), et non plus en nanosecondes, avec très peu de chaleur dissipée.</p>
+
+    <h3>Des promesses à nuancer</h3>
+    <p>Les commentaires techniques qui ont accompagné la publication invitent à la prudence. D'abord, la vitesse ×1 000 concerne le <em>composant de commutation seul</em>, pas un ordinateur dans son ensemble : un processeur dépend de dizaines d'autres éléments (mémoires, bus, interconnexions, logiciels) qui ne seront pas transformés du jour au lendemain. Ensuite, la technologie n'a été testée jusqu'ici que sur un seul élément : le défi est désormais de fabriquer de manière fiable des milliards de ces commutateurs sur une seule puce, de les intégrer aux procédés CMOS existants sans faire exploser les coûts — l'objectif affiché est un prototype fonctionnel d'ici 2030.</p>
+
+    <p>Malgré ces réserves, il s'agit d'une avancée de fond : elle montre que la « deuxième révolution quantique » — l'exploitation délibérée de la superposition, de l'intrication et du spin — ne concerne pas que les ordinateurs quantiques à qubits, mais aussi le devenir de l'électronique classique elle-même. Pour la théorie de la calculabilité et des modèles de calcul, c'est aussi un rappel utile : le modèle physique du calcul n'est pas figé, et les modèles abstraits (machines de Turing, circuits booléens) devront continuer d'accompagner ces évolutions technologiques.</p>
+
+    <div class="sources">
+      Sources : <a href="https://www.presse-citron.net/traiter-en-une-seconde-des-donnees-dont-le-traitement-prenait-une-heure-des-chercheurs-ont-trouve-comment-multiplier-la-puissance-des-ordinateurs-par-1-000-tout-en-redui/">Presse-citron</a> · <a href="https://lenergeek.com/2026/05/21/luniversite-de-tokyo-a-cree-un-dispositif-qui-multiplie-par-1-000-la-vitesse-des-ordinateurs-ce-qui-prenait-une-heure-ne-prend-quune-seconde/">L'Énergeek</a> · <a href="https://www.generation-nt.com/actualites/puce-processeur-ordinateur-acceleration-2075685/amp">Génération-NT</a> · publication originale : revue <em>Science</em> (équipe S. Nakatsuji, Université de Tokyo / RIKEN / Université d'Osaka).
+    </div>
+    <a href="#top" class="back-top">↑ Retour aux articles</a>
+  </article>
+</section>
+
+<!-- ================= ARTICLE COMPLET 3 ================= -->
+<section class="article-section" id="article-genia-body">
+  <article class="article-card">
+    <div class="article-meta">
+      <span class="cat">Actualité scientifique</span>
+      <span>📅 Octobre 2026 · 5 min de lecture</span>
+    </div>
+    <h2>Fête de la science 2026 : la GenIA au service de la santé personnalisée</h2>
+
+    <p class="lead">Du 2 au 12 octobre 2026, la Fête de la science investit toute la France. Cette année, les centres de recherche comme l'IRISA et l'Inria articulent leurs présentations scientifiques au grand public autour d'un thème en pleine expansion : l'Intelligence Artificielle Générative (GenIA) et son intégration dans le domaine de la santé personnalisée.</p>
+
+    <p>L'édition 2026 illustre un basculement : l'IA générative n'est plus présentée au public comme une curiosité technologique, mais comme un outil en cours d'appropriation par des domaines d'application concrets — et la santé est sans doute le plus sensible d'entre eux. Des conférences organisées pendant la Fête de la science, comme celle du Musée des Transmissions avec un chercheur en IA de l'IRISA, proposent ainsi des rencontres accessibles à tous autour de l'IA et de la santé, avec de vrais temps d'échange avec le public.</p>
+
+    <h3>Former les soignants, pas seulement les modèles</h3>
+    <p>Un fil conducteur revient dans les événements scientifiques de l'automne 2026 : la formation. Le projet européen AI&amp;Health, les EDIH bretons et les actions de l'Inria Academy (par exemple autour de l'événement City Health Care) travaillent à faire monter en compétence les professionnels de santé sur l'IA générative, avec des chercheurs spécialistes de la science des données — comme l'équipe Inria-IRISA LACODAM, qui anime des formations sur la GenIA pour les soignants. Des journées dédiées aux usages de l'IA générative dans les établissements de santé, avec un focus sur les grands modèles de langage (LLM), se multiplient également, à l'image de celles organisées à Nancy autour du CHRU.</p>
+
+    <h3>Des enjeux scientifiques, pas seulement médicaux</h3>
+    <ul>
+      <li><strong>Fiabilité</strong> : un LLM appliqué au soin doit produire des réponses exactes et traçables — on retrouve ici les thématiques du programme national « Évaluation de l'IA ».</li>
+      <li><strong>Protection des données</strong> : la santé personnalisée repose sur des données sensibles, ce qui pose des questions de confidentialité différentielle, d'apprentissage fédéré et de sécurisation des flux.</li>
+      <li><strong>Human-in-the-loop</strong> : l'IA comme appui du soin, jamais en substitution du jugement médical — un point systématiquement mis en avant dans les présentations grand public.</li>
+    </ul>
+
+    <p>Pour les étudiants en informatique, ces événements sont une excellente occasion de voir comment la recherche publique s'adresse à la société : ateliers, conférences, visites de laboratoires sont gratuits et ouverts à tous. Et pour un public de scientifiques du numérique, c'est un condensé des vraies questions ouvertes du domaine — bien loin du simplisme des annonces commerciales.</p>
+
+    <div class="sources">
+      Sources : <a href="https://www.inserm.fr/actualite/fete-de-la-science-2026/">Inserm, Fête de la science 2026 (2–12 octobre)</a> · <a href="https://www.echosciences-bretagne.bzh/evenements/conference-ia-et-sante">Echosciences Bretagne, conférence « IA et Santé » (IRISA)</a> · <a href="https://www.inria-academy.fr/actu-city-health-care-2026/">Inria Academy, City Health Care 2026</a> · <a href="https://factuel.univ-lorraine.fr/evenement/journee-numerique-et-sante-les-usages-de-lia-generative-dans-les-etablissements-de-sante/">Université de Lorraine, journée Numérique et Santé</a>.
+    </div>
+    <a href="#top" class="back-top">↑ Retour aux articles</a>
+  </article>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>© 2026 Baptiste Diedler</p>
+  <div class="footer-links">
+    <a href="mailto:baptiste.diedler@ens-paris-saclay.fr">Email</a>
+    <a href="https://github.com/BaptisteDiedler">GitHub</a>
+    <a href="https://www.linkedin.com/in/bapdiedler/">LinkedIn</a>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* ---------------------------------------------------------------------
+   Filtres par étiquette + recherche plein texte
+   Chaque <article class="post-card"> porte data-tags='["etiquette", ...]' :
+   les valeurs doivent correspondre aux data-tag des boutons de filtre.
+   --------------------------------------------------------------------- */
+const filterBtns = document.querySelectorAll(".tag-btn");
+const searchInput = document.getElementById("searchInput");
+const cards = document.querySelectorAll(".post-card");
+const emptyState = document.getElementById("emptyState");
+let activeTag = "all";
+
+function applyFilters() {
+  const q = searchInput.value.trim().toLowerCase();
+  let visible = 0;
+  cards.forEach(card => {
+    const tags = JSON.parse(card.dataset.tags || "[]");
+    const text = card.textContent.toLowerCase();
+    const okTag = activeTag === "all" || tags.includes(activeTag);
+    const okText = !q || text.includes(q);
+    const show = okTag && okText;
+    card.style.display = show ? "" : "none";
+    if (show) visible++;
+  });
+  emptyState.classList.toggle("show", visible === 0);
+}
+
+filterBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    filterBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeTag = btn.dataset.tag;
+    applyFilters();
+  });
+});
+searchInput.addEventListener("input", applyFilters);
+</script>
+
+</body>
+</html>
