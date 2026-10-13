@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Éditeur de graphes & automates → TikZ</title>
+<style>
+  :root {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --ink: #3d4a5c;
+    --ink-soft: #7c8ba1;
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --accent: #354fc7;
+    --accent-soft: #dcebf8;
+    --line: #e2e8f0;
+    --edge: #a9b4c4;
+    --sel: #354fc7;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; color: var(--ink); background: var(--bg); }
+  #app { display: flex; flex-direction: column; height: 100%; }
+
+  /* ---------- Barre d'outils ---------- */
+  #toolbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 18px; background: var(--panel);
+    border-bottom: 1px solid var(--line); z-index: 5;
+    box-shadow: 0 2px 10px rgba(120,110,90,.06);
+  }
+  #toolbar h1 { font-size: 15.5px; margin: 0 10px 0 0; font-weight: 650; color: var(--ink); white-space: nowrap; }
+  .tb-group { display: flex; gap: 6px; align-items: center; padding: 0 12px; border-right: 1px solid var(--line); }
+  .tb-group:last-of-type { border-right: none; }
+  .tb-label { font-size: 11.5px; color: var(--ink-soft); }
+  button.tool {
+    background: #f4f6f9; color: var(--ink); border: 1px solid var(--line);
+    border-radius: 10px; padding: 7px 12px; font-size: 12.5px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .18s;
+    font-family: inherit;
+  }
+  button.tool:hover { background: var(--accent-soft); border-color: var(--accent); transform: translateY(-1px); }
+  button.tool.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 3px 8px rgba(122,165,216,.35); }
+  button.tool.danger:hover { background: #f9e3e3; border-color: #d89a9a; color: #a04040; }
+  select, input[type="text"], input[type="number"] {
+    background: #f4f6f9; color: var(--ink); border: 1px solid var(--line);
+    border-radius: 9px; padding: 6px 8px; font-size: 12.5px; font-family: inherit;
+    outline: none; transition: border-color .15s;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+  input[type="range"] { width: 110px; accent-color: var(--sel); }
+  input[type="checkbox"] { accent-color: var(--sel); cursor: pointer; }
+
+  /* ---------- Zone principale ---------- */
+  #main { display: flex; flex: 1; min-height: 0; }
+  #svgWrap { flex: 1; position: relative; min-width: 0; background: var(--bg);
+    background-image: radial-gradient(#eee9df 1.1px, transparent 1.1px);
+    background-size: 22px 22px; }
+  svg#board { width: 100%; height: 100%; display: block; cursor: default; touch-action: none; }
+  svg#board.mode-node, svg#board.mode-edge { cursor: crosshair; }
+
+  /* ---------- Panneau latéral ---------- */
+  #side {
+    width: 330px; min-width: 330px; background: var(--panel); border-left: 1px solid var(--line);
+    display: flex; flex-direction: column; overflow-y: auto;
+  }
+  #side h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .7px;
+    color: var(--ink-soft); margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-weight: 600; }
+  .prop-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .row label { flex: 0 0 88px; font-size: 12px; color: var(--ink-soft); }
+  .row input[type="text"], .row select { flex: 1; width: 100%; }
+  .row input[type="range"] { flex: 1; }
+  .hint { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }
+  .btn-sm {
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    padding: 8px 10px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+    transition: filter .15s;
+  }
+  .btn-sm:hover { filter: brightness(1.07); }
+  .btn-sm.secondary { background: #b9c6d6; color: #fff; }
+  .btn-sm.danger { background: #d89c9c; }
+  .placeholder { color: var(--ink-soft); font-size: 12.5px; padding: 16px; line-height: 1.6; }
+  #tikzBox {
+    margin: 10px 16px; width: calc(100% - 32px); height: 280px; resize: vertical;
+    font-family: Consolas, Menlo, monospace; font-size: 11.5px; white-space: pre;
+    background: #fbfaf6; color: #51719c; border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px; line-height: 1.55; outline: none;
+  }
+  #tikzBox:focus { border-color: var(--accent); }
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: #46566b; color: #fff; padding: 10px 18px; border-radius: 12px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: all .3s; z-index: 50;
+    box-shadow: 0 6px 18px rgba(60,70,90,.25);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .legend { font-size: 11px; color: var(--ink-soft); padding: 4px 16px 12px; line-height: 1.6; }
+  .legend code { background: #f4f1ea; padding: 1px 5px; border-radius: 5px; font-size: 10.5px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <h1>✏️ Graphes & Automates → TikZ</h1>
+    <div class="tb-group">
+      <button class="tool active" id="bSelect" title="Sélectionner / déplacer (S)">✋ Sélection</button>
+      <button class="tool" id="bNode" title="Ajouter des sommets : clic sur le canvas (N)">⬤ Sommet</button>
+      <button class="tool" id="bEdge" title="Relier deux sommets : clic sur A puis B ; même sommet = boucle (E)">↝ Lien</button>
+      <label class="tb-label"><input type="checkbox" id="defDirected" checked> arc orienté</label>
+    </div>
+    <div class="tb-group">
+      <span class="tb-label">Sommets :</span>
+      <select id="defKind">
+        <option value="plain">sommet (graphe)</option>
+        <option value="state">état (automate)</option>
+      </select>
+      <span class="tb-label">Tête :</span>
+      <select id="defHead">
+        <option value="stealth">Stealth</option>
+        <option value="to">To</option>
+        <option value="latex">Latex</option>
+        <option value="bar">Barre |</option>
+        <option value="circle">Cercle</option>
+        <option value="diamond">Losange</option>
+      </select>
+    </div>
+    <div class="tb-group">
+      <span class="tb-label">Symbole initial :</span>
+      <select id="defInit" title="Symbole utilisé pour les états initiaux">
+        <option value="arrow">➜ flèche entrante</option>
+        <option value="star">✦ étoile</option>
+        <option value="triangle">▲ triangle</option>
+        <option value="text">« début » texte</option>
+      </select>
+    </div>
+    <div class="tb-group">
+      <button class="tool danger" id="bDelete" title="Supprimer la sélection (Suppr)">🗑 Supprimer</button>
+      <button class="tool" id="bClear" title="Tout effacer">⟲ Réinitialiser</button>
+    </div>
+    <div class="tb-group">
+      <span class="tb-label">Zoom export :</span>
+      <select id="tikzScale">
+        <option value="0.028" selected>1 px ≈ 0.03 cm</option>
+        <option value="0.05">1 px ≈ 0.05 cm</option>
+        <option value="0.02">1 px ≈ 0.02 cm</option>
+      </select>
+      <span class="tb-label"><input type="checkbox" id="snapChk" checked> grille</span>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="svgWrap">
+      <svg id="board" xmlns="http://www.w3.org/2000/svg">
+        <defs id="defs"></defs>
+        <g id="gEdges"></g>
+        <g id="gNodes"></g>
+        <g id="gHandles"></g>
+        <g id="gTemp"></g>
+      </svg>
+      <div id="toast"></div>
+    </div>
+
+    <div id="side">
+      <h2>Propriétés</h2>
+      <div id="props"><div class="placeholder">Cliquez sur un sommet ou un arc pour modifier ses propriétés.<br>Double-clic = éditer le nom / l'étiquette.</div></div>
+      <h2>Code TikZ</h2>
+      <textarea id="tikzBox" readonly spellcheck="false"></textarea>
+      <div class="prop-body" style="padding-top:0">
+        <div class="row">
+          <button class="btn-sm" id="bCopy" style="flex:1">📋 Copier le TikZ</button>
+          <button class="btn-sm secondary" id="bJSON" style="flex:1">💾 Sauver / Charger</button>
+        </div>
+      </div>
+      <div class="legend">
+        Préambule LaTeX : <code>\usepackage{tikz}</code> et
+        <code>\usetikzlibrary{automata,arrows.meta,positioning}</code>.<br>
+        Raccourcis : <code>S</code> sélection · <code>N</code> sommet · <code>E</code> lien ·
+        <code>Suppr</code> effacer · <code>Échap</code> annuler la sélection en cours.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   État global
+   ===================================================================== */
+const R = 24;
+const SVGNS = "http://www.w3.org/2000/svg";
+
+let state = { nodes: [], edges: [], nextId: 1 };
+let mode = "select";
+let selection = null;         // {type:'node'|'edge', id}
+let pendingEdgeFrom = null;
+let drag = null;
+let needsRender = true;      // boucle de rendu à la demande (fluide)
+
+const board = document.getElementById("board");
+const gEdges = document.getElementById("gEdges");
+const gNodes = document.getElementById("gNodes");
+const gHandles = document.getElementById("gHandles");
+const gTemp = document.getElementById("gTemp");
+const propsDiv = document.getElementById("props");
+const tikzBox = document.getElementById("tikzBox");
+
+/* =====================================================================
+   Utilitaires
+   ===================================================================== */
+const el = (tag, attrs = {}, parent = null) => {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const nodeById = id => state.nodes.find(n => n.id === id);
+const edgeById = id => state.edges.find(e => e.id === id);
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function svgPoint(evt) {
+  const pt = board.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  return pt.matrixTransform(board.getScreenCTM().inverse());
+}
+function snap(p) {
+  if (!document.getElementById("snapChk").checked) return p;
+  p.x = Math.round(p.x / 22) * 22; p.y = Math.round(p.y / 22) * 22;
+  return p;
+}
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1800);
+}
+let saveTimer = null;
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(() => {
+  try { localStorage.setItem("tikzGraphEditor2", JSON.stringify(state)); } catch (e) {}
+}, 250); }
+function load() {
+  try {
+    const raw = localStorage.getItem("tikzGraphEditor2");
+    if (raw) { const s = JSON.parse(raw); if (s && s.nodes) state = s; }
+  } catch (e) {}
+}
+
+/* =====================================================================
+   Marqueurs de têtes de flèche
+   ===================================================================== */
+const HEADS = {
+  stealth:  { d: "M 0 0 L 11 5 L 0 10 L 3.5 5 Z", fill: true },
+  to:       { d: "M 0 0 L 11 5 L 0 10 L 4 5 Z",  fill: true },
+  latex:    { d: "M 0 0 L 11 5 L 0 10 L 6.5 5 Z", fill: true },
+  bar:      { d: "M 1 0 L 1 10",                 fill: false, sw: 2.2 },
+  circle:   { d: "M 5.5 5.5 m -4 0 a 4 4 0 1 0 8 0 a 4 4 0 1 0 -8 0", fill: true },
+  diamond:  { d: "M 0 5 L 5.5 0 L 11 5 L 5.5 10 Z", fill: true },
+};
+function buildMarkers() {
+  const defs = document.getElementById("defs");
+  defs.innerHTML = "";
+  for (const [name, h] of Object.entries(HEADS)) {
+    for (const [id, orient] of [[name + "-e", "auto"], [name + "-s", "auto-start-reverse"]]) {
+      const m = el("marker", {
+        id, markerWidth: 13, markerHeight: 13, refX: 10.5, refY: 5,
+        orient, markerUnits: "userSpaceOnUse",
+      }, defs);
+      el("path", { d: h.d, fill: h.fill ? "#a9b4c4" : "none",
+        stroke: h.fill ? "none" : "#a9b4c4", "stroke-width": h.sw || 1 }, m);
+    }
+  }
+}
+
+/* =====================================================================
+   Géométrie des arcs
+   ===================================================================== */
+function edgeEnds(e) {
+  const a = nodeById(e.a), b = nodeById(e.b);
+  const d = Math.max(dist(a, b), 1);
+  const ux = (b.x - a.x) / d, uy = (b.y - a.y) / d;
+  const p0 = { x: a.x + ux * (R + 2), y: a.y + uy * (R + 2) };
+  const p1 = { x: b.x - ux * (R + 4), y: b.y - uy * (R + 4) };
+  return { p0, p1, ux, uy, d };
+}
+function quadPoints(e) {
+  if (e.loop) return loopPoints(e);
+  const { p0, p1, ux, uy, d } = edgeEnds(e);
+  const off = (e.bend / 100) * d * 0.85;
+  const q = { x: (p0.x + p1.x) / 2 - uy * off, y: (p0.y + p1.y) / 2 + ux * off };
+  return { p0, p1, q };
+}
+function loopPoints(e) {
+  const n = nodeById(e.a);
+  const ang = e.loopAngle * Math.PI / 180;
+  const dx = Math.cos(ang), dy = Math.sin(ang);
+  const rr = R + 4, s = 38;
+  const rot = t => { const c = Math.cos(t), si = Math.sin(t);
+    return { x: n.x + (dx * c - dy * si) * rr, y: n.y + (dx * si + dy * c) * rr }; };
+  const p0 = rot(-s * Math.PI / 180), p1 = rot(s * Math.PI / 180);
+  const q = { x: n.x + dx * (rr + 52 + Math.abs(e.bend || 0) / 3),
+              y: n.y + dy * (rr + 52 + Math.abs(e.bend || 0) / 3) };
+  return { p0, p1, q };
+}
+function quadAt(t, p0, q, p1) {
+  const u = 1 - t;
+  return { x: u * u * p0.x + 2 * u * t * q.x + t * t * p1.x,
+           y: u * u * p0.y + 2 * u * t * q.y + t * t * p1.y };
+}
+function pathD(e) {
+  const { p0, p1, q } = quadPoints(e);
+  return `M ${p0.x} ${p0.y} Q ${q.x} ${q.y} ${p1.x} ${p1.y}`;
+}
+
+/* =====================================================================
+   Rendu (rebâtit tout — appelé à la demande)
+   ===================================================================== */
+const selNode = () => selection && selection.type === "node" ? nodeById(selection.id) : null;
+const selEdge = () => selection && selection.type === "edge" ? edgeById(selection.id) : null;
+
+function render() {
+  gEdges.innerHTML = ""; gNodes.innerHTML = ""; gHandles.innerHTML = ""; gTemp.innerHTML = "";
+
+  for (const e of state.edges) {
+    const g = el("g", {}, gEdges);
+    const isSel = selEdge() === e;
+    const head = HEADS[e.head] ? e.head : "stealth";
+    const color = isSel ? "#5a8fdd" : "#a9b4c4";
+    const attrs = {
+      d: pathD(e), fill: "none", stroke: color,
+      "stroke-width": isSel ? 2.6 : 1.9,
+      "stroke-dasharray": e.style === "dashed" ? "7 5" : e.style === "dotted" ? "2 4" : "none",
+      "stroke-linecap": "round", class: "edge-hit", "data-id": e.id,
+    };
+    if (e.arrow === "end" || e.arrow === "both") attrs["marker-end"] = `url(#${head}-e)`;
+    if (e.arrow === "start" || e.arrow === "both") attrs["marker-start"] = `url(#${head}-s)`;
+    el("path", attrs, g);
+    if (e.label) {
+      const { p0, p1, q } = quadPoints(e);
+      const m = quadAt(0.5, p0, q, p1);
+      const t = el("text", {
+        x: m.x, y: m.y - 7, "text-anchor": "middle",
+        "font-size": 13, "font-style": "italic", fill: "#3d4a5c",
+        "paint-order": "stroke", stroke: "#fdfcf9", "stroke-width": 5,
+      }, g);
+      t.textContent = e.label;
+    }
+  }
+
+  for (const n of state.nodes) {
+    const isSel = selNode() === n;
+    const g = el("g", { class: "node-hit", "data-id": n.id }, gNodes);
+    if (n.kind === "state" && n.accepting) {
+      el("circle", { cx: n.x, cy: n.y, r: R, fill: "none",
+        stroke: isSel ? "#5a8fdd" : "#a9b4c4", "stroke-width": 1.9 }, g);
+    }
+    el("circle", {
+      cx: n.x, cy: n.y, r: R - (n.kind === "state" && n.accepting ? 5 : 0),
+      fill: isSel ? "#dcebf8" : "#ffffff",
+      stroke: isSel ? "#5a8fdd" : "#a9b4c4",
+      "stroke-width": isSel ? 2.6 : 1.9,
+    }, g);
+
+    // symbole d'état initial
+    if (n.kind === "state" && n.initial) drawInitialSymbol(g, n, isSel);
+
+    const t = el("text", { x: n.x, y: n.y + 4.5, "text-anchor": "middle",
+      "font-size": 14, fill: "#3d4a5c", "pointer-events": "none" }, g);
+    t.textContent = n.label;
+  }
+
+  // poignées de l'arc sélectionné
+  const se = selEdge();
+  if (se) {
+    const { p0, p1, q } = quadPoints(se);
+    const m = se.loop ? q : quadAt(0.5, p0, q, p1);
+    el("circle", { cx: m.x, cy: m.y, r: 6.5, fill: "#5a8fdd", stroke: "#fff", "stroke-width": 1.5,
+      class: "handle", "data-id": se.id, style: "cursor:move" }, gHandles);
+  }
+
+  // surbrillance du sommet de départ d'un lien en cours
+  if (pendingEdgeFrom) {
+    const n = nodeById(pendingEdgeFrom);
+    el("circle", { cx: n.x, cy: n.y, r: R + 5, fill: "none",
+      stroke: "#e8b76a", "stroke-width": 2.5, "stroke-dasharray": "5 4" }, gTemp);
+  }
+
+  renderProps();
+  renderTikz();
+  save();
+}
+
+/* Symboles possibles pour l'état initial (côté SVG + côté TikZ) */
+const INIT_LABELS = { arrow: "flèche entrante", star: "étoile ✦", triangle: "triangle ▲", text: "texte « début »" };
+function drawInitialSymbol(g, n, isSel) {
+  const c = isSel ? "#5a8fdd" : "#7c8ba1";
+  const x = n.x, y = n.y;
+  if (n.initSym === "star") {
+    // étoile à 5 branches à gauche de l'état
+    const cx = x - R - 14, cy = y, ro = 9, ri = 3.8;
+    let d = "";
+    for (let i = 0; i < 10; i++) {
+      const ang = -Math.PI / 2 + i * Math.PI / 5;
+      const r = i % 2 === 0 ? ro : ri;
+      d += (i === 0 ? "M" : "L") + " " + (cx + r * Math.cos(ang)).toFixed(1) + " " + (cy + r * Math.sin(ang)).toFixed(1) + " ";
+    }
+    el("path", { d: d + "Z", fill: c, stroke: "none" }, g);
+  } else if (n.initSym === "triangle") {
+    el("path", { d: `M ${x - R - 20} ${y} L ${x - R - 8} ${y - 8} L ${x - R - 8} ${y + 8} Z`,
+      fill: c }, g);
+  } else if (n.initSym === "text") {
+    el("path", { d: `M ${x - R - 26} ${y} L ${x - R - 6} ${y}`, fill: "none",
+      stroke: c, "stroke-width": 1.4 }, g);
+    el("path", { d: `M ${x - R - 12} ${y - 5} L ${x - R - 6} ${y} L ${x - R - 12} ${y + 5}`,
+      fill: "none", stroke: c, "stroke-width": 1.4 }, g);
+    const t = el("text", { x: x - R - 14, y: y - 10, "text-anchor": "middle",
+      "font-size": 10, fill: c, "font-style": "italic" }, g);
+    t.textContent = "début";
+  } else { // arrow : flèche entrante (comme le style initial par défaut de TikZ)
+    el("path", { d: `M ${x - R - 26} ${y} L ${x - R - 5} ${y}`, fill: "none",
+      stroke: c, "stroke-width": 1.9 }, g);
+    el("path", { d: `M ${x - R - 13} ${y - 6.5} L ${x - R - 3} ${y} L ${x - R - 13} ${y + 6.5} Z`,
+      fill: c }, g);
+  }
+}
+
+/* =====================================================================
+   Panneau de propriétés
+   ===================================================================== */
+function renderProps() {
+  const n = selNode(), e = selEdge();
+  if (!n && !e) {
+    propsDiv.innerHTML = '<div class="placeholder">Cliquez sur un sommet ou un arc pour modifier ses propriétés.<br>Double-clic = éditer le nom / l\'étiquette.</div>';
+    return;
+  }
+  propsDiv.innerHTML = "";
+  const body = document.createElement("div");
+  body.className = "prop-body";
+  propsDiv.appendChild(body);
+  const row = (labelHtml, inputHtml) => {
+    const r = document.createElement("div"); r.className = "row";
+    r.innerHTML = `<label>${labelHtml}</label>${inputHtml}`;
+    body.appendChild(r); return r;
+  };
+
+  if (n) {
+    row("Nom", `<input type="text" id="pLabel" value="${esc(n.label)}" placeholder="(vide = non nommé)">`);
+    row("Type", `<select id="pKind">
+      <option value="plain" ${n.kind === "plain" ? "selected" : ""}>sommet (graphe)</option>
+      <option value="state" ${n.kind === "state" ? "selected" : ""}>état (automate)</option>
+    </select>`);
+    row("Initial", `<input type="checkbox" id="pInit" ${n.initial ? "checked" : ""}>`);
+    row("Symbole", `<select id="pInitSym" ${n.kind === "state" && n.initial ? "" : "disabled"}>
+      ${Object.entries(INIT_LABELS).map(([k, v]) =>
+        `<option value="${k}" ${(n.initSym || "arrow") === k ? "selected" : ""}>${v}</option>`).join("")}
+    </select>`);
+    row("Acceptant", `<input type="checkbox" id="pAcc" ${n.accepting ? "checked" : ""}>`);
+
+    body.querySelector("#pLabel").oninput = ev => { n.label = ev.target.value; render(); };
+    body.querySelector("#pKind").onchange = ev => { n.kind = ev.target.value; render(); };
+    body.querySelector("#pInit").onchange = ev => { n.initial = ev.target.checked;
+      if (n.initial && !n.initSym) n.initSym = document.getElementById("defInit").value; render(); };
+    body.querySelector("#pInitSym").onchange = ev => { n.initSym = ev.target.value; render(); };
+    body.querySelector("#pAcc").onchange = ev => { n.accepting = ev.target.checked; render(); };
+  }
+
+  if (e) {
+    row("Étiquette", `<input type="text" id="pEdgeLabel" value="${esc(e.label)}" placeholder="a, b, 1… (vide = aucune)">`);
+    row("Orientation", `<select id="pArrow">
+      <option value="end" ${e.arrow === "end" ? "selected" : ""}>flèche à l'arrivée (arc)</option>
+      <option value="start" ${e.arrow === "start" ? "selected" : ""}>flèche au départ</option>
+      <option value="both" ${e.arrow === "both" ? "selected" : ""}>double flèche</option>
+      <option value="none" ${e.arrow === "none" ? "selected" : ""}>aucune (arête)</option>
+    </select>`);
+    row("Tête", `<select id="pHead">
+      ${Object.keys(HEADS).map(h => `<option value="${h}" ${e.head === h ? "selected" : ""}>${h}</option>`).join("")}
+    </select>`);
+    row("Trait", `<select id="pStyle">
+      <option value="solid" ${e.style === "solid" ? "selected" : ""}>plein</option>
+      <option value="dashed" ${e.style === "dashed" ? "selected" : ""}>pointillés (tirets)</option>
+      <option value="dotted" ${e.style === "dotted" ? "selected" : ""}>pointillés (points)</option>
+    </select>`);
+    if (!e.loop) {
+      row("Courbure", `<input type="range" id="pBend" min="-90" max="90" step="5" value="${e.bend}">
+        <span id="pBendV" style="font-size:11.5px;color:var(--ink-soft)">${e.bend > 0 ? "+" : ""}${e.bend}°</span>`);
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = "Ou glissez la poignée ronde au milieu de l'arc pour le courber.";
+      body.appendChild(hint);
+      body.querySelector("#pBend").oninput = ev => {
+        e.bend = +ev.target.value;
+        body.querySelector("#pBendV").textContent = (e.bend > 0 ? "+" : "") + e.bend + "°";
+        render();
+      };
+    } else {
+      row("Angle boucle", `<input type="range" id="pLoopAngle" min="0" max="360" step="15" value="${e.loopAngle}">
+        <span style="font-size:11.5px;color:var(--ink-soft)">${e.loopAngle}°</span>`);
+      body.querySelector("#pLoopAngle").oninput = ev => { e.loopAngle = +ev.target.value; render(); };
+    }
+    body.querySelector("#pEdgeLabel").oninput = ev => { e.label = ev.target.value; render(); };
+    body.querySelector("#pArrow").onchange = ev => { e.arrow = ev.target.value; render(); };
+    body.querySelector("#pHead").onchange = ev => { e.head = ev.target.value; render(); };
+    body.querySelector("#pStyle").onchange = ev => { e.style = ev.target.value; render(); };
+  }
+}
+
+/* =====================================================================
+   Génération TikZ
+   ===================================================================== */
+const TIKZ_HEAD = { stealth: "Stealth", to: "To", latex: "Latex", bar: "Bar", circle: "Circle", diamond: "Diamond" };
+const MATH_OK = /^\\?[A-Za-z0-9_]+$/;
+const texLabel = s => MATH_OK.test(s) ? `$${s.replace(/^\*/, "")}$` : s;
+function arrowSpec(e) {
+  const h = TIKZ_HEAD[e.head] || "Stealth";
+  if (e.arrow === "both") return `${h}-${h}`;
+  if (e.arrow === "start") return `${h}-`;
+  if (e.arrow === "none") return `-`;
+  return `-${h}`;
+}
+function initOptions(n) {
+  // options TikZ pour l'état initial selon le symbole choisi
+  switch (n.initSym) {
+    case "star":     return "initial by diamond, initial text=$\\star$";
+    case "triangle": return "initial by diamond, initial text=$\\bullet$";
+    case "text":     return "initial by arrow, initial text=début";
+    default:         return "initial by arrow, initial text="; // flèche entrante
+  }
+}
+function renderTikz() {
+  const scale = parseFloat(document.getElementById("tikzScale").value);
+  const H = board.clientHeight || 800;
+  const cm = p => ({ x: +(p.x * scale).toFixed(2), y: +((H - p.y) * scale).toFixed(2) });
+  const names = new Map();
+  state.nodes.forEach((n, i) => names.set(n.id, `n${i + 1}`));
+
+  const lines = [];
+  lines.push("% Préambule : \\usepackage{tikz} \\usetikzlibrary{automata,arrows.meta,positioning}");
+  lines.push("\\begin{tikzpicture}[");
+  lines.push("  auto, node distance=2cm, thick,");
+  lines.push("  every state/.style={draw, circle, minimum size=6mm},");
+  lines.push("  initial by arrow/.style={-{Stealth[length=3mm]}},");
+  lines.push("]");
+
+  for (const n of state.nodes) {
+    const c = cm(n), name = names.get(n.id);
+    const opt = [];
+    if (n.kind === "state") {
+      opt.push("state");
+      if (n.initial) opt.push("initial", initOptions(n));
+      if (n.accepting) opt.push("accepting");
+    } else {
+      opt.push("draw, circle");
+    }
+    const lbl = n.label ? `{${texLabel(n.label)}}` : "{}";
+    lines.push(`  \\node[${opt.join(", ")}] (${name}) at (${c.x}, ${c.y}) ${lbl};`);
+  }
+  for (const e of state.edges) {
+    const a = names.get(e.a), b = names.get(e.b);
+    const opt = [arrowSpec(e)];
+    if (e.style === "dashed") opt.push("dashed");
+    if (e.style === "dotted") opt.push("dotted");
+    let toOpts = "", lblPos = "";
+    if (e.loop) {
+      const ang = Math.round(e.loopAngle);
+      toOpts = `[loop, out=${ang + 40}, in=${ang - 40}, looseness=6]`;
+      lblPos = "[above]";
+    } else if (e.bend) {
+      toOpts = e.bend > 0 ? `[bend left=${e.bend}]` : `[bend right=${-e.bend}]`;
+      lblPos = "[above]";
+    }
+    const lbl = e.label ? ` node${lblPos}{${texLabel(e.label)}}` : "";
+    lines.push(`  \\draw[${opt.join(", ")}] (${a}) to${toOpts}${lbl} (${b});`);
+  }
+  lines.push("\\end{tikzpicture}");
+  tikzBox.value = lines.join("\n");
+}
+
+/* =====================================================================
+   Interactions — hit-testing par ids stables (plus de bugs de drag)
+   ===================================================================== */
+function hitNode(p) {
+  for (let i = state.nodes.length - 1; i >= 0; i--) {
+    const n = state.nodes[i];
+    if (dist(p, n) <= R + 5) return n;
+  }
+  return null;
+}
+function hitEdge(p) {
+  for (let i = state.edges.length - 1; i >= 0; i--) {
+    const e = state.edges[i];
+    const { p0, p1, q } = quadPoints(e);
+    for (let t = 0; t <= 1.001; t += 0.03) {
+      if (dist(p, quadAt(t, p0, q, p1)) < 7.5) return e;
+    }
+  }
+  return null;
+}
+function hitHandle(p) {
+  for (const h of gHandles.children) {
+    if (dist(p, { x: +h.getAttribute("cx"), y: +h.getAttribute("cy") }) <= 10)
+      return +h.dataset.id;
+  }
+  return null;
+}
+
+function addNode(p) {
+  const n = {
+    id: state.nextId++, x: p.x, y: p.y, label: "",
+    kind: document.getElementById("defKind").value,
+    initial: false, accepting: false,
+    initSym: document.getElementById("defInit").value,
+  };
+  state.nodes.push(n);
+  return n;
+}
+function addEdge(a, b) {
+  const loop = a === b;
+  const e = {
+    id: state.nextId++, a: a.id, b: b.id, label: "",
+    arrow: document.getElementById("defDirected").checked ? "end" : "none",
+    head: document.getElementById("defHead").value,
+    style: "solid", bend: 0, loop, loopAngle: loop ? 90 : 0,
+  };
+  state.edges.push(e);
+  return e;
+}
+function deleteSelection() {
+  if (!selection) return;
+  if (selection.type === "node") {
+    state.edges = state.edges.filter(e => e.a !== selection.id && e.b !== selection.id);
+    state.nodes = state.nodes.filter(n => n.id !== selection.id);
+  } else {
+    state.edges = state.edges.filter(e => e.id !== selection.id);
+  }
+  selection = null;
+  render();
+}
+
+let lastPropsFocus = null;
+board.addEventListener("pointerdown", ev => {
+  if (ev.button !== 0) return;
+  const p = svgPoint(ev);
+  board.setPointerCapture(ev.pointerId);
+
+  const hid = hitHandle(p);
+  if (hid !== null && selEdge()) {
+    drag = { kind: selEdge().loop ? "loop-angle" : "bend", edge: selEdge(), start: p };
+    ev.preventDefault();
+    return;
+  }
+
+  if (mode === "select") {
+    const n = hitNode(p);
+    if (n) {
+      selection = { type: "node", id: n.id };
+      drag = { kind: "node", node: n, dx: p.x - n.x, dy: p.y - n.y, moved: false, start: p };
+      render();
+      return;
+    }
+    const e = hitEdge(p);
+    if (e) { selection = { type: "edge", id: e.id }; render(); return; }
+    selection = null;
+    render();
+    return;
+  }
+
+  if (mode === "node") {
+    const n = addNode(snap(p));
+    selection = { type: "node", id: n.id };
+    render();
+    return;
+  }
+
+  if (mode === "edge") {
+    const n = hitNode(p);
+    if (!n) { pendingEdgeFrom = null; render(); return; }
+    if (pendingEdgeFrom === null) {
+      pendingEdgeFrom = n.id;
+      render();
+    } else if (pendingEdgeFrom === n.id) {
+      // double clic sur le même sommet → boucle
+      const e = addEdge(n, n);
+      pendingEdgeFrom = null;
+      selection = { type: "edge", id: e.id };
+      render();
+    } else {
+      const e = addEdge(nodeById(pendingEdgeFrom), n);
+      pendingEdgeFrom = null;
+      selection = { type: "edge", id: e.id };
+      render();
+    }
+  }
+});
+
+board.addEventListener("pointermove", ev => {
+  if (!drag) return;
+  const p = svgPoint(ev);
+  if (drag.kind === "node") {
+    let nx = p.x - drag.dx, ny = p.y - drag.dy;
+    if (Math.abs(p.x - drag.start.x) + Math.abs(p.y - drag.start.y) > 3) drag.moved = true;
+    if (drag.moved) { const s = snap({ x: nx, y: ny }); nx = s.x; ny = s.y; }
+    drag.node.x = nx; drag.node.y = ny;
+    render();
+  } else if (drag.kind === "bend") {
+    const e = drag.edge;
+    const { p0, p1, ux, uy, d } = edgeEnds(e);
+    const mx = (p0.x + p1.x) / 2, my = (p0.y + p1.y) / 2;
+    const off = (p.x - mx) * (-uy) + (p.y - my) * (ux);
+    e.bend = clamp(Math.round(off / (d * 0.85) * 20) * 5, -90, 90);
+    render();
+  } else if (drag.kind === "loop-angle") {
+    const e = drag.edge, n = nodeById(e.a);
+    let ang = Math.atan2(p.y - n.y, p.x - n.x) * 180 / Math.PI;
+    e.loopAngle = ((Math.round(ang / 15) * 15) % 360 + 360) % 360;
+    render();
+  }
+});
+board.addEventListener("pointerup", () => { drag = null; });
+board.addEventListener("pointercancel", () => { drag = null; });
+
+board.addEventListener("dblclick", ev => {
+  const p = svgPoint(ev);
+  const n = hitNode(p);
+  const targetId = n ? "#pLabel" : "#pEdgeLabel";
+  const e = n ? null : hitEdge(p);
+  if (n) selection = { type: "node", id: n.id };
+  else if (e) selection = { type: "edge", id: e.id };
+  else return;
+  render();
+  setTimeout(() => { const i = document.querySelector(targetId); if (i) { i.focus(); i.select(); } }, 40);
+});
+
+window.addEventListener("keydown", ev => {
+  const t = ev.target.tagName;
+  if (t === "INPUT" || t === "TEXTAREA" || t === "SELECT") return;
+  if (ev.key === "Delete" || ev.key === "Backspace") { ev.preventDefault(); deleteSelection(); }
+  if (ev.key === "Escape") { pendingEdgeFrom = null; selection = null; render(); }
+  const k = ev.key.toLowerCase();
+  if (k === "s") setMode("select");
+  if (k === "n") setMode("node");
+  if (k === "e") setMode("edge");
+});
+
+function setMode(m) {
+  mode = m; pendingEdgeFrom = null;
+  document.getElementById("bSelect").classList.toggle("active", m === "select");
+  document.getElementById("bNode").classList.toggle("active", m === "node");
+  document.getElementById("bEdge").classList.toggle("active", m === "edge");
+  board.classList.toggle("mode-node", m === "node");
+  board.classList.toggle("mode-edge", m === "edge");
+  render();
+}
+document.getElementById("bSelect").onclick = () => setMode("select");
+document.getElementById("bNode").onclick = () => setMode("node");
+document.getElementById("bEdge").onclick = () => setMode("edge");
+document.getElementById("bDelete").onclick = deleteSelection;
+document.getElementById("bClear").onclick = () => {
+  if (confirm("Effacer tout le dessin ?")) {
+    state = { nodes: [], edges: [], nextId: 1 };
+    selection = null; render();
+  }
+};
+document.getElementById("tikzScale").onchange = renderTikz;
+
+document.getElementById("bCopy").onclick = async () => {
+  const txt = tikzBox.value;
+  try { await navigator.clipboard.writeText(txt); toast("Code TikZ copié !"); }
+  catch (e) {
+    tikzBox.removeAttribute("readonly"); tikzBox.select();
+    try { document.execCommand("copy"); toast("Code TikZ copié !"); }
+    catch (e2) { toast("Sélectionnez le code et faites Ctrl+C"); }
+    tikzBox.setAttribute("readonly", ""); window.getSelection().removeAllRanges();
+  }
+};
+
+document.getElementById("bJSON").onclick = () => {
+  const raw = prompt("Sauver : copiez ce JSON.\nCharger : collez un JSON puis validez.", JSON.stringify(state));
+  if (raw === null) return;
+  try {
+    const s = JSON.parse(raw);
+    if (s && Array.isArray(s.nodes) && Array.isArray(s.edges)) {
+      state = s; selection = null; render(); toast("Dessin chargé.");
+    } else toast("JSON invalide.");
+  } catch (e) { toast("JSON invalide."); }
+};
+
+/* =====================================================================
+   Initialisation
+   ===================================================================== */
+buildMarkers();
+load();
+if (!state.nodes.length && !state.edges.length) {
+  const a = { id: 1, x: 176, y: 198, label: "q_0", kind: "state", initial: true, accepting: false, initSym: "arrow" };
+  const b = { id: 2, x: 396, y: 198, label: "q_1", kind: "state", initial: false, accepting: true, initSym: "arrow" };
+  state.nodes = [a, b];
+  state.edges = [
+    { id: 3, a: 1, b: 2, label: "a", arrow: "end", head: "stealth", style: "solid", bend: 15, loop: false, loopAngle: 0 },
+    { id: 4, a: 2, b: 1, label: "b", arrow: "end", head: "stealth", style: "solid", bend: 15, loop: false, loopAngle: 0 },
+    { id: 5, a: 1, b: 1, label: "c", arrow: "end", head: "stealth", style: "dashed", bend: 0, loop: true, loopAngle: 90 },
+  ];
+  state.nextId = 6;
+  save();
+}
+window.addEventListener("resize", () => renderTikz());
+render();
+</script>
+</body>
+</html>
